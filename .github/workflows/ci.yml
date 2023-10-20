@@ -1,0 +1,65 @@
+name: Python application
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - "5432:5432"
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.10.13
+
+    - name: Installing resoruces
+      run: |
+        pip install --upgrade pip==20.0.2
+        pip install pipenv
+
+    - name: Cache pipenv
+      uses: actions/cache@v2
+      id: cache-venv
+      with:
+        path: ./.venv
+        key: ${{ runner.os }}-venv-${{ hashFiles('Pipfile.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-venv-
+
+    - name: Installing requirements
+      run: |
+        pipenv install --dev
+      # if: steps.cache-venv.outputs.cache-hit != 'true'
+
+    - name: Checking PEP8 code style
+      run: |
+        pipenv run flake8 --count
+
+    - name: Checking Black code formatter
+      run: |
+        pipenv run black . --check
+
+    - name: Running tests
+      run: |
+        pipenv run coverage run -m pytest --ds=config.settings.test
+
+    - name: Checking coverage
+      run: |
+        pipenv run coverage report --fail-under=90 -m
+        pipenv run coverage xml
