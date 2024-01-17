@@ -34,7 +34,7 @@ jobs:
         pip install pipenv
 
     - name: Cache pipenv
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-venv
       with:
         path: ./.venv
